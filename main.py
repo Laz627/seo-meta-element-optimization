@@ -242,131 +242,131 @@ class SEOOptimizer:
             st.error(f"Error optimizing {element_type} for URL {url}: {str(e)}")
             return None
             
-async def process_batch_async(
+    async def process_batch_async(
+            self,
+            batch_df: pd.DataFrame,
+            element_type: str,
+            element_column: str,
+            session: ClientSession,
+            progress_bar=None
+        ) -> List[Tuple[int, Optional[str]]]:
+            tasks = []
+            results = []
+            chunk_size = 20  # Process 20 items at a time
+            max_retries = 3
+    
+            async def process_with_retry(index, row, retry_count=0):
+                try:
+                    if not self.validate_input_data(row, ['URL', 'Action']):
+                        return index, None
+    
+                    keyword = row.get('Primary Keyword') if 'Primary Keyword' in row else None
+    
+                    result = await self.create_optimization_request(
+                        current_text=row[element_column],
+                        element_type=element_type,
+                        action=row['Action'],
+                        keyword=keyword,
+                        url=row['URL'],
+                        session=session
+                    )
+    
+                    if result:
+                        return index, result
+                    elif retry_count < max_retries:
+                        await asyncio.sleep(1)
+                        return await process_with_retry(index, row, retry_count + 1)
+                    else:
+                        st.error(f"Failed to process row {index} after {max_retries} attempts")
+                        return index, None
+    
+                except Exception as e:
+                    st.error(f"Error processing row {index}: {str(e)}")
+                    if retry_count < max_retries:
+                        await asyncio.sleep(1)
+                        return await process_with_retry(index, row, retry_count + 1)
+                    return index, None
+    
+            for chunk_start in range(0, len(batch_df), chunk_size):
+                chunk_end = min(chunk_start + chunk_size, len(batch_df))
+                chunk_df = batch_df.iloc[chunk_start:chunk_end]
+    
+                chunk_tasks = [
+                    process_with_retry(index, row)
+                    for index, row in chunk_df.iterrows()
+                ]
+    
+                try:
+                    chunk_results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
+                    for result in chunk_results:
+                        if isinstance(result, tuple):
+                            results.append(result)
+                        else:
+                            st.error(f"Error in chunk processing: {str(result)}")
+    
+                    if progress_bar:
+                        progress_bar.progress((chunk_end) / len(batch_df))
+    
+                except Exception as e:
+                    st.error(f"Error processing chunk: {str(e)}")
+                    continue
+    
+                await asyncio.sleep(0.2)
+    
+            return results
+    
+    async def process_dataframe_async(
         self,
-        batch_df: pd.DataFrame,
+        df: pd.DataFrame,
         element_type: str,
         element_column: str,
-        session: ClientSession,
         progress_bar=None
-    ) -> List[Tuple[int, Optional[str]]]:
-        tasks = []
-        results = []
-        chunk_size = 20  # Process 20 items at a time
-        max_retries = 3
-
-        async def process_with_retry(index, row, retry_count=0):
-            try:
-                if not self.validate_input_data(row, ['URL', 'Action']):
-                    return index, None
-
-                keyword = row.get('Primary Keyword') if 'Primary Keyword' in row else None
-
-                result = await self.create_optimization_request(
-                    current_text=row[element_column],
-                    element_type=element_type,
-                    action=row['Action'],
-                    keyword=keyword,
-                    url=row['URL'],
-                    session=session
-                )
-
-                if result:
-                    return index, result
-                elif retry_count < max_retries:
-                    await asyncio.sleep(1)
-                    return await process_with_retry(index, row, retry_count + 1)
-                else:
-                    st.error(f"Failed to process row {index} after {max_retries} attempts")
-                    return index, None
-
-            except Exception as e:
-                st.error(f"Error processing row {index}: {str(e)}")
-                if retry_count < max_retries:
-                    await asyncio.sleep(1)
-                    return await process_with_retry(index, row, retry_count + 1)
-                return index, None
-
-        for chunk_start in range(0, len(batch_df), chunk_size):
-            chunk_end = min(chunk_start + chunk_size, len(batch_df))
-            chunk_df = batch_df.iloc[chunk_start:chunk_end]
-
-            chunk_tasks = [
-                process_with_retry(index, row)
-                for index, row in chunk_df.iterrows()
-            ]
-
-            try:
-                chunk_results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
-                for result in chunk_results:
-                    if isinstance(result, tuple):
-                        results.append(result)
-                    else:
-                        st.error(f"Error in chunk processing: {str(result)}")
-
-                if progress_bar:
-                    progress_bar.progress((chunk_end) / len(batch_df))
-
-            except Exception as e:
-                st.error(f"Error processing chunk: {str(e)}")
-                continue
-
-            await asyncio.sleep(0.2)
-
-        return results
-
-async def process_dataframe_async(
-    self,
-    df: pd.DataFrame,
-    element_type: str,
-    element_column: str,
-    progress_bar=None
-) -> pd.DataFrame:
-    """Process a single DataFrame (sheet) asynchronously."""
-    try:
-        connector = TCPConnector(limit=20)
-        timeout = aiohttp.ClientTimeout(total=300, connect=60, sock_connect=60, sock_read=60)
-
-        async with ClientSession(connector=connector, timeout=timeout) as session:
-            df['New Element'] = ''
-            df['New Character Length'] = 0
-            df['Processing Status'] = 'Pending'
-            df['Keyword Used'] = 'No Keyword Provided'
-            df['Page Intent'] = df['URL'].apply(self.determine_page_intent)
-
-            batch_size = 100
-            total_batches = (len(df) + batch_size - 1) // batch_size
-
-            for batch_num in range(0, len(df), batch_size):
-                batch_df = df.iloc[batch_num:batch_num + batch_size]
-                results = await self.process_batch_async(
-                    batch_df,
-                    element_type,
-                    element_column,
-                    session,
-                    progress_bar
-                )
-
-                for index, result in results:
-                    if result:
-                        df.at[index, 'New Element'] = result
-                        df.at[index, 'New Character Length'] = len(result)
-                        df.at[index, 'Processing Status'] = 'Success'
-                        if 'Primary Keyword' in df.columns and not pd.isna(df.at[index, 'Primary Keyword']):
-                            df.at[index, 'Keyword Used'] = 'Yes'
-                    else:
-                        df.at[index, 'Processing Status'] = 'Failed'
-
-                # Update progress
-                if progress_bar:
-                    progress = min((batch_num + batch_size) / len(df), 1.0)
-                    progress_bar.progress(progress)
-
-        return df
-
-    except Exception as e:
-        st.error(f"Error processing dataframe: {str(e)}")
-        raise e
+    ) -> pd.DataFrame:
+        """Process a single DataFrame (sheet) asynchronously."""
+        try:
+            connector = TCPConnector(limit=20)
+            timeout = aiohttp.ClientTimeout(total=300, connect=60, sock_connect=60, sock_read=60)
+    
+            async with ClientSession(connector=connector, timeout=timeout) as session:
+                df['New Element'] = ''
+                df['New Character Length'] = 0
+                df['Processing Status'] = 'Pending'
+                df['Keyword Used'] = 'No Keyword Provided'
+                df['Page Intent'] = df['URL'].apply(self.determine_page_intent)
+    
+                batch_size = 100
+                total_batches = (len(df) + batch_size - 1) // batch_size
+    
+                for batch_num in range(0, len(df), batch_size):
+                    batch_df = df.iloc[batch_num:batch_num + batch_size]
+                    results = await self.process_batch_async(
+                        batch_df,
+                        element_type,
+                        element_column,
+                        session,
+                        progress_bar
+                    )
+    
+                    for index, result in results:
+                        if result:
+                            df.at[index, 'New Element'] = result
+                            df.at[index, 'New Character Length'] = len(result)
+                            df.at[index, 'Processing Status'] = 'Success'
+                            if 'Primary Keyword' in df.columns and not pd.isna(df.at[index, 'Primary Keyword']):
+                                df.at[index, 'Keyword Used'] = 'Yes'
+                        else:
+                            df.at[index, 'Processing Status'] = 'Failed'
+    
+                    # Update progress
+                    if progress_bar:
+                        progress = min((batch_num + batch_size) / len(df), 1.0)
+                        progress_bar.progress(progress)
+    
+            return df
+    
+        except Exception as e:
+            st.error(f"Error processing dataframe: {str(e)}")
+            raise e
     
 def main():
     st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
