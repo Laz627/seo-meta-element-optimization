@@ -6,3 +6,4 @@ tqdm
 cachetools
 numpy
 python-dotenv
+xlsxwriter
