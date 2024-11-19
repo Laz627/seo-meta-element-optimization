@@ -502,19 +502,36 @@ def process_file(file, sheet_name, progress_bar, status_text):
         progress_bar.progress(progress)
         status_text.text(f"Processing {sheet_name}: {i + 1}/{total_rows} rows completed...")
     return f"{sheet_name} processing complete!"
+async def process_row_openai(row, element_type, action):
+    """Simulate OpenAI API call for a single row."""
+    try:
+        # Replace this with your OpenAI API call logic
+        response = f"Optimized {row[element_type]} with action {action}"  # Simulated response
+        await asyncio.sleep(1)  # Simulate delay
+        return response
+    except Exception as e:
+        st.error(f"Error processing row: {e}")
+        return None
+
+async def process_file_async(df, element_column, action):
+    """Process an entire DataFrame asynchronously."""
+    tasks = []
+    for _, row in df.iterrows():
+        tasks.append(process_row_openai(row, element_column, action))
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    return results
 
 def main():
-    # Call setup to get user inputs
-    api_key, brand_name, intent_mapping = setup_streamlit_page()
-    
-    # Check if the API key is provided
+    st.title("SEO Meta Element Optimizer")
+    st.subheader("Created by Brandon Lazovic")
+
+    api_key = st.text_input("Enter OpenAI API Key", type="password")
     if not api_key:
-        st.error("Please enter your OpenAI API key in the sidebar.")
+        st.error("Please provide your OpenAI API key to proceed.")
         return
-    
-    # Set the OpenAI API key dynamically
+
     openai.api_key = api_key
-    
+
     uploaded_file = st.file_uploader(
         "Upload Excel file with Title Tags, H1s, and Meta Descriptions sheets",
         type=['xlsx']
@@ -524,29 +541,25 @@ def main():
         st.write("### Preview of Uploaded Data")
         try:
             xlsx = pd.read_excel(uploaded_file, sheet_name=None)
-            tabs = st.tabs(['Title Tags', 'H1s', 'Meta Descriptions'])
-            
             processed_sheets = {}
-
-            for tab, sheet_name in zip(tabs, ['Title Tags', 'H1s', 'Meta Descriptions']):
-                with tab:
-                    if sheet_name in xlsx:
-                        st.dataframe(xlsx[sheet_name].head())
-                    else:
-                        st.warning(f"Missing {sheet_name} sheet")
             
             if st.button("Start Optimization"):
                 with st.spinner("Processing sheets..."):
                     for sheet_name, df in xlsx.items():
                         if sheet_name in ['Title Tags', 'H1s', 'Meta Descriptions']:
-                            # Simulate processing (replace with actual logic)
-                            df['Optimized'] = df.iloc[:, 1]  # Simulate optimization
+                            st.write(f"Processing {sheet_name}...")
+                            # Asynchronous processing
+                            results = asyncio.run(process_file_async(
+                                df, element_column='Title Tag' if sheet_name == 'Title Tags' else 'H1' if sheet_name == 'H1s' else 'Meta Description',
+                                action="optimize"
+                            ))
+                            df['Optimized'] = results
                             processed_sheets[sheet_name] = df
                             st.success(f"{sheet_name} processing complete!")
                         else:
                             st.warning(f"Skipping unrecognized sheet: {sheet_name}")
-
-                # Save processed sheets to a new Excel file
+                
+                # Save results to a new Excel file
                 if processed_sheets:
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -554,7 +567,6 @@ def main():
                             df.to_excel(writer, index=False, sheet_name=sheet_name)
                     output.seek(0)
 
-                    # Provide download link
                     st.download_button(
                         label="Download Optimized Sheets",
                         data=output,
