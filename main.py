@@ -315,58 +315,58 @@ async def process_batch_async(
 
         return results
 
-    async def process_dataframe_async(
-        self,
-        df: pd.DataFrame,
-        element_type: str,
-        element_column: str,
-        progress_bar=None
-    ) -> pd.DataFrame:
-        """Process a single DataFrame (sheet) asynchronously."""
-        try:
-            connector = TCPConnector(limit=20)
-            timeout = aiohttp.ClientTimeout(total=300, connect=60, sock_connect=60, sock_read=60)
-
-            async with ClientSession(connector=connector, timeout=timeout) as session:
-                df['New Element'] = ''
-                df['New Character Length'] = 0
-                df['Processing Status'] = 'Pending'
-                df['Keyword Used'] = 'No Keyword Provided'
-                df['Page Intent'] = df['URL'].apply(self.determine_page_intent)
-
-                batch_size = 100
-                total_batches = (len(df) + batch_size - 1) // batch_size
-
-                for batch_num in range(0, len(df), batch_size):
-                    batch_df = df.iloc[batch_num:batch_num + batch_size]
-                    results = await self.process_batch_async(
-                        batch_df,
-                        element_type,
-                        element_column,
-                        session,
-                        progress_bar
-                    )
-
-                    for index, result in results:
-                        if result:
-                            df.at[index, 'New Element'] = result
-                            df.at[index, 'New Character Length'] = len(result)
-                            df.at[index, 'Processing Status'] = 'Success'
-                            if 'Primary Keyword' in df.columns and not pd.isna(df.at[index, 'Primary Keyword']):
-                                df.at[index, 'Keyword Used'] = 'Yes'
-                        else:
-                            df.at[index, 'Processing Status'] = 'Failed'
-
-                    # Update progress
-                    if progress_bar:
-                        progress = min((batch_num + batch_size) / len(df), 1.0)
-                        progress_bar.progress(progress)
-
-            return df
-
-        except Exception as e:
-            st.error(f"Error processing dataframe: {str(e)}")
-            raise e
+        async def process_dataframe_async(
+            self,
+            df: pd.DataFrame,
+            element_type: str,
+            element_column: str,
+            progress_bar=None
+        ) -> pd.DataFrame:
+            """Process a single DataFrame (sheet) asynchronously."""
+            try:
+                connector = TCPConnector(limit=20)
+                timeout = aiohttp.ClientTimeout(total=300, connect=60, sock_connect=60, sock_read=60)
+    
+                async with ClientSession(connector=connector, timeout=timeout) as session:
+                    df['New Element'] = ''
+                    df['New Character Length'] = 0
+                    df['Processing Status'] = 'Pending'
+                    df['Keyword Used'] = 'No Keyword Provided'
+                    df['Page Intent'] = df['URL'].apply(self.determine_page_intent)
+    
+                    batch_size = 100
+                    total_batches = (len(df) + batch_size - 1) // batch_size
+    
+                    for batch_num in range(0, len(df), batch_size):
+                        batch_df = df.iloc[batch_num:batch_num + batch_size]
+                        results = await self.process_batch_async(
+                            batch_df,
+                            element_type,
+                            element_column,
+                            session,
+                            progress_bar
+                        )
+    
+                        for index, result in results:
+                            if result:
+                                df.at[index, 'New Element'] = result
+                                df.at[index, 'New Character Length'] = len(result)
+                                df.at[index, 'Processing Status'] = 'Success'
+                                if 'Primary Keyword' in df.columns and not pd.isna(df.at[index, 'Primary Keyword']):
+                                    df.at[index, 'Keyword Used'] = 'Yes'
+                            else:
+                                df.at[index, 'Processing Status'] = 'Failed'
+    
+                        # Update progress
+                        if progress_bar:
+                            progress = min((batch_num + batch_size) / len(df), 1.0)
+                            progress_bar.progress(progress)
+    
+                return df
+    
+            except Exception as e:
+                st.error(f"Error processing dataframe: {str(e)}")
+                raise e
     
 def main():
     st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
