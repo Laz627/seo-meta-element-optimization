@@ -21,6 +21,7 @@ from aiohttp import ClientSession, TCPConnector
 from cachetools import TTLCache
 from dotenv import load_dotenv
 import os
+import io
 
 # Configure logging
 logging.basicConfig(
