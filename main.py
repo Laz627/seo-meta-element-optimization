@@ -314,176 +314,176 @@ async def process_batch_async(
 
         return results
 
-    async def process_dataframe_async(
-        self,
-        df: pd.DataFrame,
-        element_type: str,
-        element_column: str,
-        progress_bar=None
-    ) -> pd.DataFrame:
-        """Process a single DataFrame (sheet) asynchronously."""
-        connector = TCPConnector(limit=20)
-        timeout = aiohttp.ClientTimeout(total=300, connect=60, sock_connect=60, sock_read=60)
-
-        async with ClientSession(connector=connector, timeout=timeout) as session:
-            df['New Element'] = ''
-            df['New Character Length'] = 0
-            df['Processing Status'] = 'Pending'
-            df['Keyword Used'] = 'No Keyword Provided'
-            df['Page Intent'] = df['URL'].apply(self.determine_page_intent)
-
-            batch_size = 100
-            total_batches = (len(df) + batch_size - 1) // batch_size
-
-            for batch_num in range(0, len(df), batch_size):
-                batch_df = df.iloc[batch_num:batch_num + batch_size]
-                results = await self.process_batch_async(
-                    batch_df,
-                    element_type,
-                    element_column,
-                    session,
-                    progress_bar
-                )
-
-                for index, result in results:
-                    if result:
-                        df.at[index, 'New Element'] = result
-                        df.at[index, 'New Character Length'] = len(result)
-                        df.at[index, 'Processing Status'] = 'Success'
-                        if 'Primary Keyword' in df.columns and not pd.isna(df.at[index, 'Primary Keyword']):
-                            df.at[index, 'Keyword Used'] = 'Yes'
-                    else:
-                        df.at[index, 'Processing Status'] = 'Failed'
-
-        return df
-
-def main():
-    st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
-    st.title("SEO Meta Element Optimizer")
-    st.subheader("Optimize your website's meta elements using AI")
-
-    # Sidebar configuration
-    with st.sidebar:
-        st.header("Configuration")
-        api_key = st.text_input("OpenAI API Key", type="password")
-        brand_name = st.text_input("Brand Name")
-        
-        st.header("Intent Mapping")
-        with st.expander("Configure URL Patterns"):
-            patterns = st.text_area(
-                "Enter URL patterns (one per line) followed by intent type:",
-                "shop:transactional\n"
-                "ideas:informational\n"
-                "inspiration:inspirational\n"
-                "locations:localized\n"
-                "showroom:localized"
-            )
-            
-            intent_mapping = {}
-            for line in patterns.split('\n'):
-                if ':' in line:
-                    pattern, intent = line.split(':')
-                    intent_mapping[pattern.strip()] = intent.strip()
-
-    # Main content
-    st.markdown("""
-    ### Instructions
-    1. Download and fill out the template file below
-    2. Enter your OpenAI API key and brand name in the sidebar
-    3. Upload your completed Excel file
-    4. Click 'Start Optimization' to begin processing
-    """)
-
-    # Template download
-    template_file = create_template_file()
-    st.download_button(
-        label="📥 Download Template File",
-        data=template_file,
-        file_name="seo_meta_template.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-    # File upload
-    uploaded_file = st.file_uploader("Upload your Excel file", type=['xlsx'])
-
-    if uploaded_file:
-        try:
-            xlsx = pd.read_excel(uploaded_file, sheet_name=None)
-            
-            if not validate_excel_structure(xlsx):
-                st.stop()
-
-            st.write("### Preview of uploaded data")
-            tabs = st.tabs(['Title Tags', 'H1s', 'Meta Descriptions'])
-            
-            for tab, sheet_name in zip(tabs, ['Title Tags', 'H1s', 'Meta Descriptions']):
-                with tab:
-                    if sheet_name in xlsx:
-                        st.dataframe(xlsx[sheet_name].head())
-                    else:
-                        st.warning(f"Missing {sheet_name} sheet")
-
-            if st.button("Start Optimization"):
-                if not api_key:
-                    st.error("Please provide an OpenAI API key")
-                    st.stop()
-                
-                if not brand_name:
-                    st.error("Please provide a brand name")
-                    st.stop()
-
-                optimizer = SEOOptimizer(
-                    api_key=api_key,
-                    brand_name=brand_name,
-                    intent_mapping=intent_mapping
-                )
-
-                results = {}
-                progress_bars = {}
-                
-                for sheet_name in ['Title Tags', 'H1s', 'Meta Descriptions']:
-                    if sheet_name not in xlsx:
-                        continue
-
-                    st.write(f"Processing {sheet_name}...")
-                    progress_bars[sheet_name] = st.progress(0.0)
-                    
-                    df = xlsx[sheet_name]
-                    element_type = 'title' if sheet_name == 'Title Tags' else 'h1' if sheet_name == 'H1s' else 'meta'
-                    element_column = 'Title Tag' if sheet_name == 'Title Tags' else 'H1' if sheet_name == 'H1s' else 'Meta Description'
-
-                    try:
-                        results[sheet_name] = asyncio.run(
-                            optimizer.process_dataframe_async(
-                                df,
-                                element_type,
-                                element_column,
-                                progress_bars[sheet_name]
-                            )
-                        )
-                        st.success(f"{sheet_name} processing complete!")
-                    except Exception as e:
-                        st.error(f"Error processing {sheet_name}: {str(e)}")
-                        continue
-
-                if results:
-                    st.write("### Download Results")
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                        for sheet_name, df in results.items():
-                            df.to_excel(writer, sheet_name=sheet_name, index=False)
-                    
-                    output.seek(0)
-                    st.download_button(
-                        label="📥 Download Optimized Results",
-                        data=output,
-                        file_name=f"optimized_meta_elements_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        async def process_dataframe_async(
+            self,
+            df: pd.DataFrame,
+            element_type: str,
+            element_column: str,
+            progress_bar=None
+        ) -> pd.DataFrame:
+            """Process a single DataFrame (sheet) asynchronously."""
+            connector = TCPConnector(limit=20)
+            timeout = aiohttp.ClientTimeout(total=300, connect=60, sock_connect=60, sock_read=60)
+    
+            async with ClientSession(connector=connector, timeout=timeout) as session:
+                df['New Element'] = ''
+                df['New Character Length'] = 0
+                df['Processing Status'] = 'Pending'
+                df['Keyword Used'] = 'No Keyword Provided'
+                df['Page Intent'] = df['URL'].apply(self.determine_page_intent)
+    
+                batch_size = 100
+                total_batches = (len(df) + batch_size - 1) // batch_size
+    
+                for batch_num in range(0, len(df), batch_size):
+                    batch_df = df.iloc[batch_num:batch_num + batch_size]
+                    results = await self.process_batch_async(
+                        batch_df,
+                        element_type,
+                        element_column,
+                        session,
+                        progress_bar
                     )
-
-        except Exception as e:
-            st.error(f"Error processing file: {str(e)}")
-            st.error(traceback.format_exc())
-
-if __name__ == "__main__":
-    main()
+    
+                    for index, result in results:
+                        if result:
+                            df.at[index, 'New Element'] = result
+                            df.at[index, 'New Character Length'] = len(result)
+                            df.at[index, 'Processing Status'] = 'Success'
+                            if 'Primary Keyword' in df.columns and not pd.isna(df.at[index, 'Primary Keyword']):
+                                df.at[index, 'Keyword Used'] = 'Yes'
+                        else:
+                            df.at[index, 'Processing Status'] = 'Failed'
+    
+            return df
+    
+    def main():
+        st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
+        st.title("SEO Meta Element Optimizer")
+        st.subheader("Optimize your website's meta elements using AI")
+    
+        # Sidebar configuration
+        with st.sidebar:
+            st.header("Configuration")
+            api_key = st.text_input("OpenAI API Key", type="password")
+            brand_name = st.text_input("Brand Name")
+            
+            st.header("Intent Mapping")
+            with st.expander("Configure URL Patterns"):
+                patterns = st.text_area(
+                    "Enter URL patterns (one per line) followed by intent type:",
+                    "shop:transactional\n"
+                    "ideas:informational\n"
+                    "inspiration:inspirational\n"
+                    "locations:localized\n"
+                    "showroom:localized"
+                )
+                
+                intent_mapping = {}
+                for line in patterns.split('\n'):
+                    if ':' in line:
+                        pattern, intent = line.split(':')
+                        intent_mapping[pattern.strip()] = intent.strip()
+    
+        # Main content
+        st.markdown("""
+        ### Instructions
+        1. Download and fill out the template file below
+        2. Enter your OpenAI API key and brand name in the sidebar
+        3. Upload your completed Excel file
+        4. Click 'Start Optimization' to begin processing
+        """)
+    
+        # Template download
+        template_file = create_template_file()
+        st.download_button(
+            label="📥 Download Template File",
+            data=template_file,
+            file_name="seo_meta_template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    
+        # File upload
+        uploaded_file = st.file_uploader("Upload your Excel file", type=['xlsx'])
+    
+        if uploaded_file:
+            try:
+                xlsx = pd.read_excel(uploaded_file, sheet_name=None)
+                
+                if not validate_excel_structure(xlsx):
+                    st.stop()
+    
+                st.write("### Preview of uploaded data")
+                tabs = st.tabs(['Title Tags', 'H1s', 'Meta Descriptions'])
+                
+                for tab, sheet_name in zip(tabs, ['Title Tags', 'H1s', 'Meta Descriptions']):
+                    with tab:
+                        if sheet_name in xlsx:
+                            st.dataframe(xlsx[sheet_name].head())
+                        else:
+                            st.warning(f"Missing {sheet_name} sheet")
+    
+                if st.button("Start Optimization"):
+                    if not api_key:
+                        st.error("Please provide an OpenAI API key")
+                        st.stop()
+                    
+                    if not brand_name:
+                        st.error("Please provide a brand name")
+                        st.stop()
+    
+                    optimizer = SEOOptimizer(
+                        api_key=api_key,
+                        brand_name=brand_name,
+                        intent_mapping=intent_mapping
+                    )
+    
+                    results = {}
+                    progress_bars = {}
+                    
+                    for sheet_name in ['Title Tags', 'H1s', 'Meta Descriptions']:
+                        if sheet_name not in xlsx:
+                            continue
+    
+                        st.write(f"Processing {sheet_name}...")
+                        progress_bars[sheet_name] = st.progress(0.0)
+                        
+                        df = xlsx[sheet_name]
+                        element_type = 'title' if sheet_name == 'Title Tags' else 'h1' if sheet_name == 'H1s' else 'meta'
+                        element_column = 'Title Tag' if sheet_name == 'Title Tags' else 'H1' if sheet_name == 'H1s' else 'Meta Description'
+    
+                        try:
+                            results[sheet_name] = asyncio.run(
+                                optimizer.process_dataframe_async(
+                                    df,
+                                    element_type,
+                                    element_column,
+                                    progress_bars[sheet_name]
+                                )
+                            )
+                            st.success(f"{sheet_name} processing complete!")
+                        except Exception as e:
+                            st.error(f"Error processing {sheet_name}: {str(e)}")
+                            continue
+    
+                    if results:
+                        st.write("### Download Results")
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                            for sheet_name, df in results.items():
+                                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                        
+                        output.seek(0)
+                        st.download_button(
+                            label="📥 Download Optimized Results",
+                            data=output,
+                            file_name=f"optimized_meta_elements_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+    
+            except Exception as e:
+                st.error(f"Error processing file: {str(e)}")
+                st.error(traceback.format_exc())
+    
+    if __name__ == "__main__":
+        main()
