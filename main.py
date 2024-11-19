@@ -364,93 +364,112 @@ def main():
     col1, col2 = st.columns([3, 1])
     with col1:
         st.title("SEO Meta Element Optimizer")
-        st.caption("Created by Brandon Lazovic | [LinkedIn](https://www.linkedin.com/in/brandon-lazovic/)")
-    
-    # Detailed explanation
-    st.markdown("""
-    ### What This Tool Does
-    
-    This AI-powered tool helps optimize three critical SEO elements of your website:
-    
-    1. **Title Tags** (65 characters)
-        - Optimizes title tags for search engines and click-through rates
-        - Maintains important keywords while improving readability
-        - Preserves brand/location information where needed
-        - Ensures proper length and format
-    
-    2. **H1 Headers** (70 characters)
-        - Creates engaging and relevant page headers
-        - Maintains keyword relevance while improving user experience
-        - Ensures consistency with page content and intent
-        - Optimizes for proper length
-    
-    3. **Meta Descriptions** (155 characters)
-        - Crafts compelling descriptions that drive clicks
-        - Includes clear calls-to-action
-        - Incorporates important keywords naturally
-        - Maintains optimal length for search results
-    
-    ### Key Features
-    
-    - **Intent-Based Optimization**: Automatically detects and optimizes for different page types:
+        st.caption("Created by Brandon Lazovic | [LinkedIn](https://www.linkedin.com/in/brandonlazovic/) | [Twitter](https://twitter.com/brandonlazovic)")
+
+    # Tool Overview in Accordions
+    with st.expander("🔍 What This Tool Does", expanded=True):
+        st.markdown("""
+        This AI-powered tool helps optimize three critical SEO elements of your website:
+        
+        1. **Title Tags** (65 characters)
+            - Optimizes title tags for search engines and click-through rates
+            - Maintains important keywords while improving readability
+            - Preserves brand/location information where needed
+            - Ensures proper length and format
+        
+        2. **H1 Headers** (70 characters)
+            - Creates engaging and relevant page headers
+            - Maintains keyword relevance while improving user experience
+            - Ensures consistency with page content and intent
+            - Optimizes for proper length
+        
+        3. **Meta Descriptions** (155 characters)
+            - Crafts compelling descriptions that drive clicks
+            - Includes clear calls-to-action
+            - Incorporates important keywords naturally
+            - Maintains optimal length for search results
+        """)
+
+    with st.expander("✨ Key Features"):
+        st.markdown("""
+        ### Intent-Based Optimization
+        Automatically detects and optimizes for different page types:
         - 🛍️ Transactional (shop pages)
         - 📚 Informational (blog/resource pages)
         - ✨ Inspirational (galleries/showcase pages)
         - 📍 Local (location/showroom pages)
-    
-    - **Smart Processing**:
+        
+        ### Smart Processing
         - Preserves existing location information
         - Maintains important keyword qualifiers
         - Handles brand name consistency
         - Processes bulk updates efficiently
-    
-    - **Flexible Actions**:
+        
+        ### Flexible Actions
         - Reduce Length: Optimize overly long elements
         - Add Length: Expand thin content
         - Create New: Generate fresh meta elements
-    
-    ### When to Use This Tool
-    
-    - ✅ Optimizing underperforming pages
-    - ✅ Updating meta elements for new content
-    - ✅ Standardizing meta elements across your site
-    - ✅ Improving local SEO presence
-    - ✅ Enhancing click-through rates from search results
-    
-    ### How It Works
-    
-    1. The tool uses OpenAI's GPT-4 model to analyze and optimize your meta elements
-    2. Each element is processed based on:
-        - Current content
-        - Page intent
-        - Primary keywords
-        - Desired action (reduce/add length)
-    3. Results maintain your brand voice while improving SEO effectiveness
-    """)
+        """)
 
-    # Usage Instructions
-    st.markdown("""
-    ### How to Use
-    
-    1. **Prepare Your Data**:
+    with st.expander("🎯 When to Use This Tool"):
+        st.markdown("""
+        - ✅ Optimizing underperforming pages
+        - ✅ Updating meta elements for new content
+        - ✅ Standardizing meta elements across your site
+        - ✅ Improving local SEO presence
+        - ✅ Enhancing click-through rates from search results
+        """)
+
+    with st.expander("⚙️ How It Works"):
+        st.markdown("""
+        1. The tool uses OpenAI's GPT-4 model to analyze and optimize your meta elements
+        2. Each element is processed based on:
+            - Current content
+            - Page intent
+            - Primary keywords
+            - Desired action (reduce/add length)
+        3. Results maintain your brand voice while improving SEO effectiveness
+        """)
+
+    with st.expander("📝 How to Use", expanded=True):
+        st.markdown("""
+        ### 1. Prepare Your Data
         - Download the template file below
         - Fill in your meta elements
         - Specify desired actions and keywords
-    
-    2. **Configure Settings**:
+        
+        ### 2. Configure Settings
         - Enter your OpenAI API key (required)
         - Set your brand name
         - Customize URL patterns if needed
-    
-    3. **Process and Review**:
+        
+        ### 3. Process and Review
         - Upload your completed file
         - Start the optimization process
         - Review and download results
-    
-    > **Note**: Your API key is used only during your session and is not stored.
-    """)
+        
+        > **Note**: Your API key is used only during your session and is not stored.
+        """)
 
-    # Sidebar configuration
+    with st.expander("❓ FAQ"):
+        st.markdown("""
+        **Q: How much does it cost to use?**
+        - The tool is free, but you need your own OpenAI API key. API usage costs approximately $0.01-0.02 per page.
+
+        **Q: Is my data secure?**
+        - Your data is processed in real-time and is not stored. API keys are used only during your active session.
+
+        **Q: What's the maximum number of pages I can process?**
+        - The tool can handle hundreds of pages in one session. For very large sites (1000+ pages), consider processing in batches.
+
+        **Q: How accurate are the optimizations?**
+        - The tool follows SEO best practices and maintains your specified keywords and brand voice. Always review outputs before implementing.
+
+        **Q: Can I customize the optimization rules?**
+        - Yes, you can specify different actions (reduce/add length) and provide primary keywords for each page.
+        """)
+
+    # Sidebar configuration (continues as before)
     with st.sidebar:
         st.header("Configuration")
         api_key = st.text_input("OpenAI API Key", type="password")
@@ -473,16 +492,9 @@ def main():
                     pattern, intent = line.split(':')
                     intent_mapping[pattern.strip()] = intent.strip()
 
-    # Main content
-    st.markdown("""
-    ### Instructions
-    1. Download and fill out the template file below
-    2. Enter your OpenAI API key and brand name in the sidebar
-    3. Upload your completed Excel file
-    4. Click 'Start Optimization' to begin processing
-    """)
-
-    # Template download
+    # Template download section
+    st.markdown("---")
+    st.subheader("Get Started")
     template_file = create_template_file()
     st.download_button(
         label="📥 Download Template File",
