@@ -455,7 +455,7 @@ def setup_streamlit_page():
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for sheet_name, df in template.items():
             df.to_excel(writer, index=False, sheet_name=sheet_name)
-        writer.save()
+
     st.download_button(
         label="Download Template",
         data=output.getvalue(),
