@@ -7,5 +7,4 @@ cachetools
 numpy
 python-dotenv
 xlsxwriter
-time
 openpyxl
