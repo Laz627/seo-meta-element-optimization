@@ -6,4 +6,3 @@ tqdm
 cachetools
 numpy
 python-dotenv
-io
