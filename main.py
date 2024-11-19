@@ -412,6 +412,55 @@ def process_files(optimizer, files, progress_bars):
 def setup_streamlit_page():
     st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
     st.title("SEO Meta Element Optimizer")
+    st.subheader("Created by Brandon Lazovic")
+
+    st.markdown("""
+    ## What Does This App Do?
+    The **SEO Meta Element Optimizer** is designed to help you improve the on-page SEO elements of your website, such as:
+    - **Title Tags**: Optimize for length, keyword inclusion, and alignment with page intent.
+    - **H1 Tags**: Refine for keyword relevance and readability.
+    - **Meta Descriptions**: Enhance for clarity, keyword inclusion, and click-through rate optimization.
+
+    By leveraging OpenAI's API, the app intelligently analyzes your content and provides optimized suggestions tailored to your brand and page intent.
+
+    ## Instructions
+    1. **Enter your OpenAI API Key** in the sidebar.
+    2. Upload an Excel file containing the following required sheets:
+        - **Title Tags**: Columns required: `URL`, `Title Tag`, and optionally `Primary Keyword`.
+        - **H1s**: Columns required: `URL`, `H1`, and optionally `Primary Keyword`.
+        - **Meta Descriptions**: Columns required: `URL`, `Meta Description`, and optionally `Primary Keyword`.
+    3. Press the **Start Optimization** button to process the file.
+    4. Download the optimized results for your review and implementation.
+
+    ### Notes
+    - Your OpenAI API key is used securely during the session and is not stored.
+    - The uploaded Excel file should have properly named sheets and columns as shown in the downloadable template.
+
+    ### Use Cases
+    - Improve SEO performance for pages with underperforming metadata.
+    - Generate consistent and intent-driven meta elements for large-scale websites.
+    - Save time by automating repetitive optimization tasks.
+
+    ### Template File
+    """)
+
+    # Provide a downloadable template
+    template = {
+        'Title Tags': pd.DataFrame({'URL': [], 'Title Tag': [], 'Primary Keyword': []}),
+        'H1s': pd.DataFrame({'URL': [], 'H1': [], 'Primary Keyword': []}),
+        'Meta Descriptions': pd.DataFrame({'URL': [], 'Meta Description': [], 'Primary Keyword': []}),
+    }
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        for sheet_name, df in template.items():
+            df.to_excel(writer, index=False, sheet_name=sheet_name)
+        writer.save()
+    st.download_button(
+        label="Download Template",
+        data=output.getvalue(),
+        file_name="SEO_Meta_Optimization_Template.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
     with st.sidebar:
         st.header("Configuration")
