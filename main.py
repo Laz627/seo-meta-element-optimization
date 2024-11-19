@@ -22,6 +22,7 @@ from cachetools import TTLCache
 from dotenv import load_dotenv
 import os
 import io
+import time
 
 # Configure logging
 logging.basicConfig(
