@@ -19,6 +19,8 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from aiohttp import ClientSession, TCPConnector
 from cachetools import TTLCache
+from dotenv import load_dotenv
+import os
 
 # Configure logging
 logging.basicConfig(
