@@ -133,12 +133,12 @@ class SEOOptimizer:
         return None
         
     def validate_input_data(self, row: pd.Series, required_columns: List[str]) -> bool:
-    """Validate input data for required fields."""
-    essential_columns = [col for col in required_columns if col != 'Primary Keyword']
-    for column in essential_columns:
-        if column not in row or pd.isna(row[column]):
-            return False
-    return True
+        """Validate input data for required fields."""
+        essential_columns = [col for col in required_columns if col != 'Primary Keyword']
+        for column in essential_columns:
+            if column not in row or pd.isna(row[column]):
+                return False
+        return True
     
     async def create_optimization_request(
         self,
