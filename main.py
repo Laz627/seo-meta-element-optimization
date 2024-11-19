@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 import os
 import io
 import time
+import openpyxl
 
 # Configure logging
 logging.basicConfig(
