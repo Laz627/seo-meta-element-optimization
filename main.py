@@ -491,6 +491,16 @@ def setup_streamlit_page():
 
         return api_key, brand_name, intent_mapping
 
+def process_file(file, sheet_name, progress_bar, status_text):
+    """Simulated function to process a sheet."""
+    total_rows = len(file)
+    for i, row in enumerate(file.iterrows()):
+        time.sleep(0.1)  # Simulate processing time
+        progress = (i + 1) / total_rows
+        progress_bar.progress(progress)
+        status_text.text(f"Processing {sheet_name}: {i + 1}/{total_rows} rows completed...")
+    return f"{sheet_name} processing complete!"
+
 def main():
     # Call setup to get user inputs
     api_key, brand_name, intent_mapping = setup_streamlit_page()
@@ -509,8 +519,37 @@ def main():
     )
     
     if uploaded_file:
-        st.write("### Preview of uploaded data")
-        # Rest of your code for processing the uploaded file...
+        st.write("### Preview of Uploaded Data")
+        try:
+            xlsx = pd.read_excel(uploaded_file, sheet_name=None)
+            tabs = st.tabs(['Title Tags', 'H1s', 'Meta Descriptions'])
+            
+            for tab, sheet_name in zip(tabs, ['Title Tags', 'H1s', 'Meta Descriptions']):
+                with tab:
+                    if sheet_name in xlsx:
+                        st.dataframe(xlsx[sheet_name].head())
+                    else:
+                        st.warning(f"Missing {sheet_name} sheet")
+            
+            if st.button("Start Optimization"):
+                with st.spinner("Initializing optimization..."):
+                    # Create a progress bar and status text
+                    progress_bar = st.progress(0.0)
+                    status_text = st.empty()
+
+                    # Process each sheet with progress feedback
+                    for sheet_name, df in xlsx.items():
+                        if sheet_name in ['Title Tags', 'H1s', 'Meta Descriptions']:
+                            result = process_file(df, sheet_name, progress_bar, status_text)
+                            st.success(result)
+                        else:
+                            st.warning(f"Skipping unrecognized sheet: {sheet_name}")
+
+                    # Final completion message
+                    st.success("All sheets have been processed successfully!")
+                    status_text.text("Processing complete!")
+        except Exception as e:
+            st.error(f"Error processing file: {str(e)}")
 
 # Run the Streamlit app
 if __name__ == "__main__":
