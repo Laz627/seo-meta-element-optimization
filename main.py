@@ -447,133 +447,129 @@ def setup_streamlit_page():
     ### Template File
     """)
 
-    # Provide a downloadable template
+# Template file generator
+def create_template_file():
+    """Generate an Excel template for user download."""
     template = {
-        'Title Tags': pd.DataFrame({'URL': [], 'Title Tag': [], 'Primary Keyword': []}),
-        'H1s': pd.DataFrame({'URL': [], 'H1': [], 'Primary Keyword': []}),
-        'Meta Descriptions': pd.DataFrame({'URL': [], 'Meta Description': [], 'Primary Keyword': []}),
+        "Title Tags": pd.DataFrame({"URL": [], "Title Tag": [], "Primary Keyword": []}),
+        "H1s": pd.DataFrame({"URL": [], "H1": [], "Primary Keyword": []}),
+        "Meta Descriptions": pd.DataFrame({"URL": [], "Meta Description": [], "Primary Keyword": []}),
     }
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         for sheet_name, df in template.items():
             df.to_excel(writer, index=False, sheet_name=sheet_name)
+    output.seek(0)
+    return output
 
-    st.download_button(
-        label="Download Template",
-        data=output.getvalue(),
-        file_name="SEO_Meta_Optimization_Template.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+# Add template download button
+template_file = create_template_file()
+st.download_button(
+    label="Download Template",
+    data=template_file,
+    file_name="SEO_Meta_Optimization_Template.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+)
 
-    with st.sidebar:
-        st.header("Configuration")
-        
-        # Text input for the user to provide their OpenAI API key
-        api_key = st.text_input("Enter OpenAI API Key", type="password")
-        
-        brand_name = st.text_input("Brand Name")
-        
-        st.header("Intent Mapping")
-        intent_mapping = {}
-        
-        with st.expander("Configure URL Patterns"):
-            patterns = st.text_area(
-                "Enter URL patterns (one per line) followed by intent type:",
-                "shop:transactional\n"
-                "ideas:informational\n"
-                "inspiration:inspirational\n"
-                "locations:localized\n"
-                "showroom:localized"
-            )
-            
-            for line in patterns.split('\n'):
-                if ':' in line:
-                    pattern, intent = line.split(':')
-                    intent_mapping[pattern.strip()] = intent.strip()
-
-        return api_key, brand_name, intent_mapping
-
-def process_file(file, sheet_name, progress_bar, status_text):
-    """Simulated function to process a sheet."""
-    total_rows = len(file)
-    for i, row in enumerate(file.iterrows()):
-        time.sleep(0.1)  # Simulate processing time
-        progress = (i + 1) / total_rows
-        progress_bar.progress(progress)
-        status_text.text(f"Processing {sheet_name}: {i + 1}/{total_rows} rows completed...")
-    return f"{sheet_name} processing complete!"
-async def process_row_openai(row, element_type, action):
+# Async functions for processing rows
+async def process_row_openai(row, element_column, action):
     """Simulate OpenAI API call for a single row."""
     try:
-        # Replace this with your OpenAI API call logic
-        response = f"Optimized {row[element_type]} with action {action}"  # Simulated response
-        await asyncio.sleep(1)  # Simulate delay
+        # Replace with actual OpenAI API call
+        response = f"Optimized {row[element_column]} with action {action}"
+        await asyncio.sleep(1)  # Simulate API delay
         return response
     except Exception as e:
-        st.error(f"Error processing row: {e}")
-        return None
+        return f"Error: {e}"
 
 async def process_file_async(df, element_column, action):
     """Process an entire DataFrame asynchronously."""
-    tasks = []
-    for _, row in df.iterrows():
-        tasks.append(process_row_openai(row, element_column, action))
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    return results
+    tasks = [
+        process_row_openai(row, element_column, action)
+        for _, row in df.iterrows()
+    ]
+    return await asyncio.gather(*tasks, return_exceptions=True)
 
+# Main function
 def main():
-    st.title("SEO Meta Element Optimizer")
-    st.subheader("Created by Brandon Lazovic")
-
+    # Input fields for API Key and file upload
     api_key = st.text_input("Enter OpenAI API Key", type="password")
     if not api_key:
-        st.error("Please provide your OpenAI API key to proceed.")
+        st.warning("Please enter your OpenAI API key to begin.")
         return
 
     openai.api_key = api_key
 
     uploaded_file = st.file_uploader(
-        "Upload Excel file with Title Tags, H1s, and Meta Descriptions sheets",
-        type=['xlsx']
+        "Upload an Excel file with Title Tags, H1s, and Meta Descriptions",
+        type=["xlsx"],
     )
     
     if uploaded_file:
         st.write("### Preview of Uploaded Data")
         try:
+            # Read all sheets from the uploaded Excel file
             xlsx = pd.read_excel(uploaded_file, sheet_name=None)
             processed_sheets = {}
-            
+
+            # Preview each recognized sheet
+            for sheet_name, df in xlsx.items():
+                if sheet_name in ["Title Tags", "H1s", "Meta Descriptions"]:
+                    st.write(f"Preview of `{sheet_name}`")
+                    st.dataframe(df.head())
+                else:
+                    st.warning(f"Unrecognized sheet `{sheet_name}` will be skipped.")
+
+            # Optimization logic
             if st.button("Start Optimization"):
                 with st.spinner("Processing sheets..."):
                     for sheet_name, df in xlsx.items():
-                        if sheet_name in ['Title Tags', 'H1s', 'Meta Descriptions']:
-                            st.write(f"Processing {sheet_name}...")
-                            # Asynchronous processing
+                        if sheet_name in ["Title Tags", "H1s", "Meta Descriptions"]:
+                            st.write(f"Processing `{sheet_name}`...")
+
+                            # Determine the element column
+                            element_column = (
+                                "Title Tag" if sheet_name == "Title Tags"
+                                else "H1" if sheet_name == "H1s"
+                                else "Meta Description"
+                            )
+
+                            if element_column not in df.columns:
+                                st.error(f"Missing required column: `{element_column}` in `{sheet_name}`")
+                                continue
+
+                            # Process rows asynchronously
                             results = asyncio.run(process_file_async(
-                                df, element_column='Title Tag' if sheet_name == 'Title Tags' else 'H1' if sheet_name == 'H1s' else 'Meta Description',
+                                df,
+                                element_column=element_column,
                                 action="optimize"
                             ))
-                            df['Optimized'] = results
+                            df["Optimized"] = results  # Add results to a new column
                             processed_sheets[sheet_name] = df
-                            st.success(f"{sheet_name} processing complete!")
+                            st.success(f"`{sheet_name}` processing complete!")
                         else:
-                            st.warning(f"Skipping unrecognized sheet: {sheet_name}")
-                
-                # Save results to a new Excel file
+                            st.warning(f"Skipping unrecognized sheet: `{sheet_name}`")
+
+                # Save processed sheets to an output Excel file
                 if processed_sheets:
                     output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
                         for sheet_name, df in processed_sheets.items():
                             df.to_excel(writer, index=False, sheet_name=sheet_name)
                     output.seek(0)
 
+                    # Provide download button for the optimized file
                     st.download_button(
                         label="Download Optimized Sheets",
                         data=output,
                         file_name="Optimized_Meta_Elements.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     )
                 else:
                     st.warning("No sheets were processed. Ensure your file has the correct structure.")
         except Exception as e:
-            st.error(f"Error processing file: {str(e)}")
+            st.error(f"Error processing the file: {str(e)}")
+
+# Run the app
+if __name__ == "__main__":
+    main()
