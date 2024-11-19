@@ -359,8 +359,96 @@ async def process_batch_async(
     
 def main():
     st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
-    st.title("SEO Meta Element Optimizer")
-    st.subheader("Optimize your website's meta elements using AI")
+    
+    # Header and Attribution
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("SEO Meta Element Optimizer")
+        st.caption("Created by Brandon Lazovic | [LinkedIn](https://www.linkedin.com/in/brandon-lazovic/)")
+    
+    # Detailed explanation
+    st.markdown("""
+    ### What This Tool Does
+    
+    This AI-powered tool helps optimize three critical SEO elements of your website:
+    
+    1. **Title Tags** (65 characters)
+        - Optimizes title tags for search engines and click-through rates
+        - Maintains important keywords while improving readability
+        - Preserves brand/location information where needed
+        - Ensures proper length and format
+    
+    2. **H1 Headers** (70 characters)
+        - Creates engaging and relevant page headers
+        - Maintains keyword relevance while improving user experience
+        - Ensures consistency with page content and intent
+        - Optimizes for proper length
+    
+    3. **Meta Descriptions** (155 characters)
+        - Crafts compelling descriptions that drive clicks
+        - Includes clear calls-to-action
+        - Incorporates important keywords naturally
+        - Maintains optimal length for search results
+    
+    ### Key Features
+    
+    - **Intent-Based Optimization**: Automatically detects and optimizes for different page types:
+        - 🛍️ Transactional (shop pages)
+        - 📚 Informational (blog/resource pages)
+        - ✨ Inspirational (galleries/showcase pages)
+        - 📍 Local (location/showroom pages)
+    
+    - **Smart Processing**:
+        - Preserves existing location information
+        - Maintains important keyword qualifiers
+        - Handles brand name consistency
+        - Processes bulk updates efficiently
+    
+    - **Flexible Actions**:
+        - Reduce Length: Optimize overly long elements
+        - Add Length: Expand thin content
+        - Create New: Generate fresh meta elements
+    
+    ### When to Use This Tool
+    
+    - ✅ Optimizing underperforming pages
+    - ✅ Updating meta elements for new content
+    - ✅ Standardizing meta elements across your site
+    - ✅ Improving local SEO presence
+    - ✅ Enhancing click-through rates from search results
+    
+    ### How It Works
+    
+    1. The tool uses OpenAI's GPT-4 model to analyze and optimize your meta elements
+    2. Each element is processed based on:
+        - Current content
+        - Page intent
+        - Primary keywords
+        - Desired action (reduce/add length)
+    3. Results maintain your brand voice while improving SEO effectiveness
+    """)
+
+    # Usage Instructions
+    st.markdown("""
+    ### How to Use
+    
+    1. **Prepare Your Data**:
+        - Download the template file below
+        - Fill in your meta elements
+        - Specify desired actions and keywords
+    
+    2. **Configure Settings**:
+        - Enter your OpenAI API key (required)
+        - Set your brand name
+        - Customize URL patterns if needed
+    
+    3. **Process and Review**:
+        - Upload your completed file
+        - Start the optimization process
+        - Review and download results
+    
+    > **Note**: Your API key is used only during your session and is not stored.
+    """)
 
     # Sidebar configuration
     with st.sidebar:
