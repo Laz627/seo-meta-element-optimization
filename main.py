@@ -353,3 +353,151 @@ class SEOOptimizer:
             logging.error(f"Critical error in process_spreadsheet: {str(e)}")
             logging.error(traceback.format_exc())
             return False
+def setup_streamlit_page():
+    st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
+    st.title("SEO Meta Element Optimizer")
+
+    with st.sidebar:
+        st.header("Configuration")
+        api_key = st.text_input("OpenAI API Key", type="password")
+        brand_name = st.text_input("Brand Name")
+        
+        st.header("Intent Mapping")
+        intent_mapping = {}
+        
+        with st.expander("Configure URL Patterns"):
+            patterns = st.text_area(
+                "Enter URL patterns (one per line) followed by intent type:",
+                "shop:transactional\n"
+                "ideas:informational\n"
+                "inspiration:inspirational\n"
+                "locations:localized\n"
+                "showroom:localized"
+            )
+            
+            for line in patterns.split('\n'):
+                if ':' in line:
+                    pattern, intent = line.split(':')
+                    intent_mapping[pattern.strip()] = intent.strip()
+
+        return api_key, brand_name, intent_mapping
+
+def process_files(optimizer, files, progress_bars):
+    results = {}
+    
+    for sheet_name, df in files.items():
+        if sheet_name not in ['Title Tags', 'H1s', 'Meta Descriptions']:
+            continue
+            
+        progress_bar = progress_bars[sheet_name]
+        
+        element_type = 'title' if sheet_name == 'Title Tags' else 'h1' if sheet_name == 'H1s' else 'meta'
+        element_column = 'Title Tag' if sheet_name == 'Title Tags' else 'H1' if sheet_name == 'H1s' else 'Meta Description'
+        
+        if element_column not in df.columns:
+            st.error(f"Missing {element_column} column in {sheet_name}")
+            continue
+            
+        results[sheet_name] = asyncio.run(
+            optimizer.process_spreadsheet_async(
+                df,
+                progress_callback=lambda x: progress_bar
+            )
+        )
+    
+    return results
+
+def main():
+    api_key, brand_name, intent_mapping = setup_streamlit_page()
+    
+    uploaded_file = st.file_uploader(
+        "Upload Excel file with Title Tags, H1s, and Meta Descriptions sheets",
+        type=['xlsx']
+    )
+    
+    if uploaded_file:
+        try:
+            xlsx = pd.read_excel(uploaded_file, sheet_name=None)
+            
+            st.write("### Preview of uploaded data")
+            tabs = st.tabs(['Title Tags', 'H1s', 'Meta Descriptions'])
+            
+            for tab, sheet_name in zip(tabs, ['Title Tags', 'H1s', 'Meta Descriptions']):
+                with tab:
+                    if sheet_name in xlsx:
+                        st.dataframe(xlsx[sheet_name].head())
+                    else:
+                        st.warning(f"Missing {sheet_name} sheet")
+            
+            if st.button("Start Optimization"):
+                if not api_key:
+                    st.error("Please provide an OpenAI API key")
+                    return
+                    
+                if not brand_name:
+                    st.error("Please provide a brand name")
+                    return
+                
+                optimizer = SEOOptimizer(
+                    api_key=api_key,
+                    brand_name=brand_name,
+                    intent_mapping=intent_mapping
+                )
+                
+                progress_bars = {
+                    sheet: st.progress(0.0) 
+                    for sheet in ['Title Tags', 'H1s', 'Meta Descriptions']
+                }
+                
+                with st.spinner("Processing..."):
+                    results = process_files(optimizer, xlsx, progress_bars)
+                
+                st.success("Processing complete!")
+                
+                for sheet_name, df in results.items():
+                    if df is not None:
+                        st.write(f"### Results for {sheet_name}")
+                        st.dataframe(df)
+                        
+                        csv = df.to_csv(index=False).encode('utf-8')
+                        st.download_button(
+                            f"Download {sheet_name} results",
+                            csv,
+                            f"optimized_{sheet_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            "text/csv"
+                        )
+                
+        except Exception as e:
+            st.error(f"Error processing file: {str(e)}")
+            logging.error(traceback.format_exc())
+
+if __name__ == "__main__":
+    
+    if 'STREAMLIT_RUNNING' in os.environ:
+        main()
+    else:
+        # Command line execution
+        async def main_async():
+            try:
+                load_dotenv()
+                api_key = os.getenv('OPENAI_API_KEY')
+                if not api_key:
+                    raise ValueError("OpenAI API key not found in environment variables")
+                    
+                brand_name = 'Your Brand'  # Replace with your brand name
+                input_file = 'input_meta_elements.xlsx'  # Replace with your input file path
+
+                optimizer = SEOOptimizer(api_key, brand_name)
+                logging.info("Starting SEO optimization process...")
+                success = await optimizer.process_spreadsheet_async(input_file)
+
+                if success:
+                    logging.info("SEO optimization process completed successfully")
+                else:
+                    logging.error("SEO optimization process completed with errors")
+
+            except Exception as e:
+                logging.error(f"Critical error in main: {str(e)}")
+                logging.error(traceback.format_exc())
+
+        asyncio.run(main_async())
