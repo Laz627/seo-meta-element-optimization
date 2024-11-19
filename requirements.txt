@@ -5,3 +5,4 @@ aiohttp
 tqdm
 cachetools
 numpy
+python-dotenv
