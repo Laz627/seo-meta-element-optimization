@@ -241,6 +241,7 @@ class SEOOptimizer:
         except Exception as e:
             st.error(f"Error optimizing {element_type} for URL {url}: {str(e)}")
             return None
+            
 async def process_batch_async(
         self,
         batch_df: pd.DataFrame,
@@ -314,27 +315,28 @@ async def process_batch_async(
 
         return results
 
-        async def process_dataframe_async(
-            self,
-            df: pd.DataFrame,
-            element_type: str,
-            element_column: str,
-            progress_bar=None
-        ) -> pd.DataFrame:
-            """Process a single DataFrame (sheet) asynchronously."""
+    async def process_dataframe_async(
+        self,
+        df: pd.DataFrame,
+        element_type: str,
+        element_column: str,
+        progress_bar=None
+    ) -> pd.DataFrame:
+        """Process a single DataFrame (sheet) asynchronously."""
+        try:
             connector = TCPConnector(limit=20)
             timeout = aiohttp.ClientTimeout(total=300, connect=60, sock_connect=60, sock_read=60)
-    
+
             async with ClientSession(connector=connector, timeout=timeout) as session:
                 df['New Element'] = ''
                 df['New Character Length'] = 0
                 df['Processing Status'] = 'Pending'
                 df['Keyword Used'] = 'No Keyword Provided'
                 df['Page Intent'] = df['URL'].apply(self.determine_page_intent)
-    
+
                 batch_size = 100
                 total_batches = (len(df) + batch_size - 1) // batch_size
-    
+
                 for batch_num in range(0, len(df), batch_size):
                     batch_df = df.iloc[batch_num:batch_num + batch_size]
                     results = await self.process_batch_async(
@@ -344,7 +346,7 @@ async def process_batch_async(
                         session,
                         progress_bar
                     )
-    
+
                     for index, result in results:
                         if result:
                             df.at[index, 'New Element'] = result
@@ -354,8 +356,17 @@ async def process_batch_async(
                                 df.at[index, 'Keyword Used'] = 'Yes'
                         else:
                             df.at[index, 'Processing Status'] = 'Failed'
-    
+
+                    # Update progress
+                    if progress_bar:
+                        progress = min((batch_num + batch_size) / len(df), 1.0)
+                        progress_bar.progress(progress)
+
             return df
+
+        except Exception as e:
+            st.error(f"Error processing dataframe: {str(e)}")
+            raise e
     
 def main():
     st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
@@ -531,41 +542,42 @@ def main():
                 if not brand_name:
                     st.error("Please provide a brand name")
                     st.stop()
-
+            
                 optimizer = SEOOptimizer(
                     api_key=api_key,
                     brand_name=brand_name,
                     intent_mapping=intent_mapping
                 )
-
+            
                 results = {}
                 progress_bars = {}
                 
                 for sheet_name in ['Title Tags', 'H1s', 'Meta Descriptions']:
                     if sheet_name not in xlsx:
                         continue
-
+            
                     st.write(f"Processing {sheet_name}...")
                     progress_bars[sheet_name] = st.progress(0.0)
                     
                     df = xlsx[sheet_name]
                     element_type = 'title' if sheet_name == 'Title Tags' else 'h1' if sheet_name == 'H1s' else 'meta'
                     element_column = 'Title Tag' if sheet_name == 'Title Tags' else 'H1' if sheet_name == 'H1s' else 'Meta Description'
-
+            
                     try:
-                        results[sheet_name] = asyncio.run(
+                        processed_df = asyncio.run(
                             optimizer.process_dataframe_async(
-                                df,
-                                element_type,
-                                element_column,
-                                progress_bars[sheet_name]
+                                df.copy(),  # Create a copy to avoid modifying original
+                                element_type=element_type,
+                                element_column=element_column,
+                                progress_bar=progress_bars[sheet_name]
                             )
                         )
+                        results[sheet_name] = processed_df
                         st.success(f"{sheet_name} processing complete!")
                     except Exception as e:
                         st.error(f"Error processing {sheet_name}: {str(e)}")
                         continue
-
+            
                 if results:
                     st.write("### Download Results")
                     output = io.BytesIO()
