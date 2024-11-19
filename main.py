@@ -412,7 +412,7 @@ def process_files(optimizer, files, progress_bars):
     
     return results
 
-def setup_streamlit_page():
+    # Set up the Streamlit app
     st.set_page_config(page_title="SEO Meta Element Optimizer", layout="wide")
     st.title("SEO Meta Element Optimizer")
     st.subheader("Created by Brandon Lazovic")
